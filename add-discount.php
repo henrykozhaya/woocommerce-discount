@@ -44,7 +44,7 @@ $discount_rules = [
     "discount_type"   => "percentage",
     "discount_value"  => 10,
     "apply_to_all"    => false,
-    "exclude_on_sale" => false,
+    "exclude_on_sale" => true,
     "exclude"         => [
         "product_ids" => [],
         "categories"  => [],
@@ -55,9 +55,9 @@ $discount_rules = [
         "product_ids" => [],
         "categories"  => [],
         "tags"        => [],
-        "brands"      => [],
+        "brands"      => ['iyo'],
     ],
-    "add_tag"         => ""
+    "add_tag"         => "valentines-offer"
 ];
 
 apply_sale_price_discount( $discount_rules );
