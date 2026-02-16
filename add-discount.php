@@ -15,4 +15,6 @@ if ( ! class_exists( "WooCommerce" ) ) {
     exit(1);
 }
 
-apply_sale_price_discount( (array)readSettings($action = "add") );
+$rules = (array) readSettings($action = "add"); 
+
+apply_sale_price_discount($rules);

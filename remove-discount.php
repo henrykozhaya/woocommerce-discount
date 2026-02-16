@@ -14,4 +14,6 @@ if ( ! class_exists( "WooCommerce" ) ) {
     exit(1);
 }
 
-remove_product_discount( (array) readSettings($action = "remove") );
+$rules = (array) readSettings($action = "remove"); 
+
+remove_product_discount($rules);
