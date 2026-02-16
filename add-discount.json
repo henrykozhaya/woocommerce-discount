@@ -1,0 +1,20 @@
+{
+    "test": false,
+    "discount_type": "percentage",
+    "discount_value": 1,
+    "apply_to_all": false,
+    "exclude_on_sale": false,
+    "exclude": {
+        "product_ids": [],
+        "categories": [],
+        "tags": [],
+        "brands": []
+    },
+    "include": {
+        "product_ids": [],
+        "categories": [],
+        "tags": [],
+        "brands": []
+    },
+    "add_tag": ""
+}

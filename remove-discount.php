@@ -14,42 +14,4 @@ if ( ! class_exists( "WooCommerce" ) ) {
     exit(1);
 }
 
-/**
- * Discount Rules Documentation
- *
- * @var array{
- *   apply_to_all: bool", // If true, the script will skip "apply_to" configuration. It will only consider the exclusion
- *   exclude: array{
- *     on_sale: bool // To exclude on sale produdcts
- *     product_ids: array<int>, // Product IDs
- *     categories:  array<string>, // Category slugs
- *     tags:        array<string>, // Tag slugs
- *     brands:      array<string>  // Brand slugs
- *   }
- *   apply_to: array{   // Apply to rparams will be skipped if apply to all is set to true
- *     product_ids: array<int>, // Product IDs
- *     categories:  array<string>, // Category slugs
- *     tags:        array<string>, // Tag slugs
- *     brands:      array<string>  // Brand slugs
- *   },
- * }
- * 
- */
-
-$rules = [
-    "apply_to_all"    => true,
-    "exclude"         => [
-        "product_ids" => [],
-        "categories"  => [],
-        "tags"        => [],
-        "brands"      => [],
-    ],
-    "include"        => [
-        "product_ids" => [],
-        "categories"  => [],
-        "tags"        => [],
-        "brands"      => [],
-    ],
-];
-
-remove_product_discount( $rules );
+remove_product_discount( readSettings($action = "remove") );

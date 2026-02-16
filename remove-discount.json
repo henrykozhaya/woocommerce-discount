@@ -1,0 +1,16 @@
+{
+    "test": false,
+    "apply_to_all": false,
+    "exclude": {
+        "product_ids": [],
+        "categories": [],
+        "tags": [],
+        "brands": []
+    },
+    "include": {
+        "product_ids": [],
+        "categories": [],
+        "tags": [],
+        "brands": []
+    }
+}

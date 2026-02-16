@@ -132,7 +132,7 @@ function build_wc_product_query_args(array $rules, int $limit = 200, int $page =
 }
 
 function apply_sale_price_discount(array $rules)
-{
+{   
     if (! class_exists('WooCommerce')) {
         return;
     }
@@ -210,6 +210,8 @@ function apply_sale_price_discount(array $rules)
 function apply_discount_to_product(WC_Product $product, array $rules)
 {
 
+    $testing = isset($rules["test"]) && $rules["test"] === true;
+
     $regular_price = (float) $product->get_regular_price();
 
     if ($regular_price <= 0) {
@@ -226,13 +228,16 @@ function apply_discount_to_product(WC_Product $product, array $rules)
         $sale_price = 0;
     }
 
-    $product->set_sale_price(wc_format_decimal($sale_price));
-    $product->set_price(wc_format_decimal($sale_price));
-    $product->save();
+    if(!$testing){
+        $product->set_sale_price(wc_format_decimal($sale_price));
+        $product->set_price(wc_format_decimal($sale_price));
+        $product->save();
+    }
+    
     // Clear cache/transients to keep memory usage low during large runs
     wc_delete_product_transients($product->get_id());
 
-    if (! empty($rules['add_tag'])) {
+    if (! empty($rules['add_tag']) && !$testing) {
         apply_tag_to_discounted_product($product, $rules['add_tag']);
     }
 
@@ -331,6 +336,7 @@ function remove_product_discount(array $rules)
 }
 function restore_product_price(WC_Product $product)
 {
+    $testing = isset($rules["test"]) && $rules["test"] === true;
 
     $regular_price = $product->get_regular_price();
 
@@ -338,13 +344,17 @@ function restore_product_price(WC_Product $product)
         return;
     }
 
-    // Remove sale price
-    $product->set_sale_price('');
+    if(!$testing){
 
-    // Restore price from regular price
-    $product->set_price($regular_price);
+        // Remove sale price
+        $product->set_sale_price('');
 
-    $product->save();
+        // Restore price from regular price
+        $product->set_price($regular_price);
+
+        $product->save();
+
+    }
 
     echo "✔ Discount removed from {$product->get_id()} \t {$regular_price} \t {$product->get_name()} \n";
 }
@@ -396,4 +406,13 @@ function validate_add_discount_rules($rules, $action = "add")
         }
     }
     return true;
+}
+
+function readSettings($action = "add"){
+    $filePath = $action . "-discount.json";
+    $file = fopen($filePath, "r");
+    $fileJSON = fread($file, filesize($filePath));
+    $fileArr = json_decode($fileJSON, true);
+    fclose($file);
+    return $fileArr;
 }
