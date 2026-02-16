@@ -409,10 +409,11 @@ function validate_add_discount_rules($rules, $action = "add")
 }
 
 function readSettings($action = "add"){
+    $settings = [];
     $filePath = $action . "-discount.json";
     $file = fopen($filePath, "r");
     $fileJSON = fread($file, filesize($filePath));
-    $fileArr = json_decode($fileJSON, true);
+    $settings = json_decode($fileJSON, true);
     fclose($file);
-    return $fileArr;
+    return (array) $settings;
 }
