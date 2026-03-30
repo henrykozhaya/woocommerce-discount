@@ -249,12 +249,12 @@ function apply_discount_to_product(WC_Product $product, array $rules)
     }
 
     $brand = '';
-    $terms = get_the_terms($product->get_id(), 'product_brand');
+    $brand_product_id = $product->is_type('variation') ? $product->get_parent_id() : $product->get_id();
+    $terms = get_the_terms($brand_product_id, 'product_brand');
 	
     if (!empty($terms) && !is_wp_error($terms)) {
 	    $brand = implode(', ', wp_list_pluck($terms, 'name'));
 	}     
-    // echo "✔ Discount applied to {$product->get_id()} \t {$regular_price} \t {$sale_price} \t {$product->get_name()} \n";
 	echo "{$product->get_id()},{$regular_price},{$sale_price},{$product->get_name()},{$brand}\n";    
 }
 
@@ -293,6 +293,7 @@ function remove_product_discount(array $rules)
     $processed_variations = 0;
 
     echo "🔍 Processing products in batches of {$args['limit']}...\n";
+    echo "ID,RegularPrice,Name,Brand\n";
 
     while (true) {
         $product_ids = wc_get_products($args);
@@ -301,7 +302,7 @@ function remove_product_discount(array $rules)
             break;
         }
 
-        echo "📦 Batch page {$args['page']} - loaded " . count($product_ids) . " product IDs\n";
+        // echo "📦 Batch page {$args['page']} - loaded " . count($product_ids) . " product IDs\n";
 
         foreach ($product_ids as $product_id) {
 
@@ -370,7 +371,14 @@ function restore_product_price(WC_Product $product, array $rules = [])
 
     }
 
-    echo "✔ Discount removed from {$product->get_id()} \t {$regular_price} \t {$product->get_name()} \n";
+    $brand = '';
+    $brand_product_id = $product->is_type('variation') ? $product->get_parent_id() : $product->get_id();
+    $terms = get_the_terms($brand_product_id, 'product_brand');
+	
+    if (!empty($terms) && !is_wp_error($terms)) {
+	    $brand = implode(', ', wp_list_pluck($terms, 'name'));
+	}     
+	echo "{$product->get_id()},{$regular_price},{$product->get_name()},{$brand}\n";
 }
 
 function validate_add_discount_rules($rules, $action = "add")
