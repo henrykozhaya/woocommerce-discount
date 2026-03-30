@@ -1,7 +1,7 @@
 {
     "dry_run": true,
     "discount_type": "percentage",
-    "discount_value": 40,
+    "discount_value": 10,
     "apply_to_all": false,
     "exclude_on_sale": false,
     "exclude": {
@@ -14,7 +14,7 @@
         "product_ids": [],
         "categories": [],
         "tags": [],
-        "brands": ["selma-cilek", "maeve"]
+        "brands": []
     },
     "add_tag": "",
     "documentation": {

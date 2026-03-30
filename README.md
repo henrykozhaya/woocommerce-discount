@@ -22,10 +22,13 @@ It is designed for stores with **thousands of products**, and avoids memory exha
 
 ```
 woocommerce-discount/
+├─ add-discount.josn
 ├─ add-discount.php
-├─ remove-discount.php
 ├─ functions.php
-└─ README.md
+├─ index.php
+├─ README.md
+├─ remove-discount.json
+└─ remove-discount.php
 ```
 
 ---
