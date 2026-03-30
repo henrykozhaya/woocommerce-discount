@@ -1,5 +1,5 @@
 {
-    "test": false,
+    "dry_run": true,
     "apply_to_all": false,
     "exclude": {
         "product_ids": [],
@@ -11,6 +11,6 @@
         "product_ids": [],
         "categories": [],
         "tags": [],
-        "brands": []
+        "brands": ["calypso"]
     }
 }

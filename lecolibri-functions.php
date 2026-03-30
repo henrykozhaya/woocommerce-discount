@@ -14,8 +14,6 @@ function build_wc_product_query_args(array $rules, int $limit = 200, int $page =
     if ($rules["apply_to_all"]) {
 
         if ($action == "add") {
-            $excluded_custom_products_ids = [];
-            $excluded_onsale_ids = [];
 
             if (isset($rules["exclude_on_sale"]) && $rules["exclude_on_sale"]) {
                 $args['meta_query'][] = array(
@@ -32,16 +30,12 @@ function build_wc_product_query_args(array $rules, int $limit = 200, int $page =
                 );
             }
 
-            $excluded_custom_products_ids = !empty($rules["exclude"]["product_ids"]) ? $rules["exclude"]["product_ids"] : [];
-
-            if (!empty($excluded_custom_products_ids)) {
-                $args['exclude'] = $excluded_custom_products_ids;
+            if (count($rules["exclude"]["product_ids"]) > 0) {
+                $args['exclude'] = $rules["exclude"]["product_ids"];
             }
 
-            if (!empty($excluded_onsale_ids)) {
-                $args['exclude'] = isset($args['exclude'])
-                    ? array_merge($args['exclude'], $excluded_onsale_ids)
-                    : $excluded_onsale_ids;
+            if (count($excluded_custom_products_ids) > 0 || count($excluded_onsale_ids) > 0) {
+                $args['exclude'] = array_merge($excluded_onsale_ids, $excluded_custom_products_ids);
             }
         } else if ($action == "remove") {
             $excluded_custom_products_ids = [];
@@ -50,7 +44,7 @@ function build_wc_product_query_args(array $rules, int $limit = 200, int $page =
             $all_sale_ids = wc_get_product_ids_on_sale();
 
             // 2. Custom IDs to exclude
-            if (!empty($rules["exclude"]["product_ids"])) {
+            if (count($rules["exclude"]["product_ids"]) > 0) {
                 $excluded_custom_products_ids = $rules["exclude"]["product_ids"];
             }
 
@@ -60,7 +54,7 @@ function build_wc_product_query_args(array $rules, int $limit = 200, int $page =
             if (count($args["include"]) <= 0) die("No products on sale to process");
         }
 
-        if (!empty($rules["exclude"]["categories"])) {
+        if (count($rules["exclude"]["categories"]) > 0) {
             $args['tax_query'][] = [
                 'taxonomy' => 'product_cat',
                 'field'    => 'slug',
@@ -69,7 +63,7 @@ function build_wc_product_query_args(array $rules, int $limit = 200, int $page =
             ];
         }
 
-        if (!empty($rules["exclude"]["tags"])) {
+        if (count($rules["exclude"]["tags"]) > 0) {
             $args['tax_query'][] = [
                 'taxonomy' => 'product_tag',
                 'field'    => 'slug',
@@ -78,7 +72,7 @@ function build_wc_product_query_args(array $rules, int $limit = 200, int $page =
             ];
         }
 
-        if (!empty($rules["exclude"]["brands"])) {
+        if (count($rules["exclude"]["brands"]) > 0) {
             $args['tax_query'][] = [
                 'taxonomy' => 'product_brand',
                 'field'    => 'slug',
@@ -86,8 +80,8 @@ function build_wc_product_query_args(array $rules, int $limit = 200, int $page =
                 'operator' => 'NOT IN',
             ];
         }
-    } 
-    else {
+    } else {
+
         if (isset($rules["exclude_on_sale"]) && $rules["exclude_on_sale"]) {
             $args['meta_query'][] = array(
                 'relation' => 'OR',
@@ -103,20 +97,20 @@ function build_wc_product_query_args(array $rules, int $limit = 200, int $page =
             );
         }
 
-        if (!empty($rules["include"]["product_ids"])) {
+        if (count($rules["include"]["product_ids"]) > 0) {
             $args['include'] = $rules["include"]["product_ids"];
         }
 
-        if (!empty($rules["include"]["categories"])) {
+        if (count($rules["include"]["categories"]) > 0) {
             $args['tax_query'][] = [
                 'taxonomy' => 'product_cat',
                 'field'    => 'slug',
-                'terms'    => $rules["include"]["categories"],
+                'terms'    => $rules["include"]["tags"],
                 'operator' => 'IN',
             ];
         }
 
-        if (!empty($rules["include"]["tags"])) {
+        if (count($rules["include"]["tags"]) > 0) {
             $args['tax_query'][] = [
                 'taxonomy' => 'product_tag',
                 'field'    => 'slug',
@@ -125,7 +119,7 @@ function build_wc_product_query_args(array $rules, int $limit = 200, int $page =
             ];
         }
 
-        if (!empty($rules["include"]["brands"])) {
+        if (count($rules["include"]["brands"]) > 0) {
             $args['tax_query'][] = [
                 'taxonomy' => 'product_brand',
                 'field'    => 'slug',
@@ -165,7 +159,7 @@ function apply_sale_price_discount(array $rules)
         }
 
         // echo "📦 Batch page {$args['page']} - loaded " . count($product_ids) . " product IDs\n";
-
+        
         foreach ($product_ids as $product_id) {
 
             $product = wc_get_product($product_id);
@@ -217,7 +211,7 @@ function apply_sale_price_discount(array $rules)
 
 function apply_discount_to_product(WC_Product $product, array $rules)
 {
-    $dryRun = isset($rules["dry_run"]) && $rules["dry_run"] === true;
+    $testing = isset($rules["test"]) && $rules["test"] === true;
 
     $regular_price = (float) $product->get_regular_price();
 
@@ -235,7 +229,7 @@ function apply_discount_to_product(WC_Product $product, array $rules)
         $sale_price = 0;
     }
 
-    if(!$dryRun){
+    if(!$testing){
         $product->set_sale_price(wc_format_decimal($sale_price));
         $product->set_price(wc_format_decimal($sale_price));
         $product->save();
@@ -244,18 +238,18 @@ function apply_discount_to_product(WC_Product $product, array $rules)
     // Clear cache/transients to keep memory usage low during large runs
     wc_delete_product_transients($product->get_id());
 
-    if (! empty($rules['add_tag']) && !$dryRun) {
+    if (! empty($rules['add_tag']) && !$testing) {
         apply_tag_to_discounted_product($product, $rules['add_tag']);
     }
-
-    $brand = '';
-    $terms = get_the_terms($product->get_id(), 'product_brand');
+    
+	$brand = '';
+	$terms = get_the_terms($product->get_id(), 'product_brand');
 	
-    if (!empty($terms) && !is_wp_error($terms)) {
-	    $brand = implode(', ', wp_list_pluck($terms, 'name'));
-	}     
-    // echo "✔ Discount applied to {$product->get_id()} \t {$regular_price} \t {$sale_price} \t {$product->get_name()} \n";
-	echo "{$product->get_id()},{$regular_price},{$sale_price},{$product->get_name()},{$brand}\n";    
+	if (!empty($terms) && !is_wp_error($terms)) {
+	$brand = implode(', ', wp_list_pluck($terms, 'name'));
+	} 
+	// echo "✔ Discount applied to {$product->get_id()} \t {$regular_price} \t {$sale_price} \t {$product->get_name()} \t {$brand} \n";
+	echo "{$product->get_id()},{$regular_price},{$sale_price},{$product->get_name()},{$brand}\n";
 }
 
 function apply_tag_to_discounted_product(WC_Product $product, string $tag_slug)
@@ -313,7 +307,7 @@ function remove_product_discount(array $rules)
 
             if ($product->is_type('simple')) {
 
-                restore_product_price($product, $rules);
+                restore_product_price($product);
                 $processed_products++;
             } elseif ($product->is_type('variable')) {
 
@@ -321,7 +315,7 @@ function remove_product_discount(array $rules)
                     $variation = wc_get_product($variation_id);
 
                     if ($variation) {
-                        restore_product_price($variation, $rules);
+                        restore_product_price($variation);
                         $processed_variations++;
 
                         // Free memory aggressively
@@ -348,9 +342,9 @@ function remove_product_discount(array $rules)
     echo "   - Processed products: {$processed_products}\n";
     echo "   - Processed variations: {$processed_variations}\n";
 }
-function restore_product_price(WC_Product $product, array $rules = [])
+function restore_product_price(WC_Product $product)
 {
-    $dryRun = isset($rules["dry_run"]) && $rules["dry_run"] === true;
+    $testing = isset($rules["test"]) && $rules["test"] === true;
 
     $regular_price = $product->get_regular_price();
 
@@ -358,7 +352,7 @@ function restore_product_price(WC_Product $product, array $rules = [])
         return;
     }
 
-    if(!$dryRun){
+    if(!$testing){
 
         // Remove sale price
         $product->set_sale_price('');

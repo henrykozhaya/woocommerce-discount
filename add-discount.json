@@ -1,7 +1,7 @@
 {
-    "test": false,
+    "dry_run": true,
     "discount_type": "percentage",
-    "discount_value": 1,
+    "discount_value": 40,
     "apply_to_all": false,
     "exclude_on_sale": false,
     "exclude": {
@@ -14,7 +14,11 @@
         "product_ids": [],
         "categories": [],
         "tags": [],
-        "brands": []
+        "brands": ["selma-cilek", "maeve"]
     },
-    "add_tag": ""
+    "add_tag": "",
+    "documentation": {
+        "product_ids_comment": "IDs should be Integers",
+        "include_exclude": "They can't be used with product_ids at the same time"
+    }
 }
