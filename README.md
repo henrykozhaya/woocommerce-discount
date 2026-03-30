@@ -1,8 +1,13 @@
-# WooCommerce Discount Scipt
+# WooCommerce Discount Script
 
 ## Add Discount
 
+This script applies discounts to WooCommerce products based on configurable rules. It supports percentage or fixed amount discounts, with options to include/exclude products by ID, category, tag, or brand. The script processes products in memory-safe batches and can optionally add a tag to discounted products.
+
 ## Remove Discount
+
+This script removes applied discounts by restoring original prices and clearing sale prices. It can target all products currently on sale or specific products based on include/exclude rules.
+
 # WooCommerce Discount Script (woocommerce-discount)
 
 This repository contains **two CLI scripts** that you can run from the server terminal (SSH) to:
@@ -22,13 +27,54 @@ It is designed for stores with **thousands of products**, and avoids memory exha
 
 ```
 woocommerce-discount/
-├─ add-discount.josn
+├─ add-discount.json
 ├─ add-discount.php
 ├─ functions.php
 ├─ index.php
 ├─ README.md
 ├─ remove-discount.json
 └─ remove-discount.php
+```
+
+---
+
+## 2) Configuration Files
+
+The scripts use JSON configuration files to define discount rules:
+
+- `add-discount.json`: Configuration for applying discounts
+- `remove-discount.json`: Configuration for removing discounts
+
+Both files support a `dry_run` option (set to `true` for testing, `false` for production).
+
+**Note:** Currently, both JSON files have `dry_run` set to `true`, so the scripts will simulate the process without making actual changes. Set to `false` to apply real discounts.
+
+### Editing Configuration
+
+Edit the JSON files to customize the discount rules. The structure matches the PHP arrays described below. Use a JSON validator to ensure syntax correctness.
+
+Example `add-discount.json`:
+```json
+{
+    "dry_run": false,
+    "discount_type": "percentage",
+    "discount_value": 10,
+    "apply_to_all": true,
+    "exclude_on_sale": false,
+    "exclude": {
+        "product_ids": [],
+        "categories": [],
+        "tags": [],
+        "brands": []
+    },
+    "include": {
+        "product_ids": [],
+        "categories": [],
+        "tags": [],
+        "brands": []
+    },
+    "add_tag": "discounted"
+}
 ```
 
 ---
@@ -63,9 +109,13 @@ Example that works:
 wordpress/
 ├─ wp-load.php
 └─ woocommerce-discount/
+    ├─ add-discount.json
     ├─ add-discount.php
-    ├─ remove-discount.php
-    └─ functions.php
+    ├─ functions.php
+    ├─ index.php
+    ├─ README.md
+    ├─ remove-discount.json
+    └─ remove-discount.php
 ```
 
 ---
@@ -161,35 +211,40 @@ And optionally adds a tag to the product.
 
 ---
 
-### Discount Rules (`$discount_rules`)
+### Discount Rules (add-discount.json)
 
-This is the configuration used by the add script:
-
-```php
-$discount_rules = [
-    "discount_type"   => "percentage",
-    "discount_value"  => 10,
-    "apply_to_all"    => true,
-    "exclude_on_sale" => false,
-    "exclude"         => [
-        "product_ids" => [],
-        "categories"  => [],
-        "tags"        => [],
-        "brands"      => [],
-    ],
-    "include"        => [
-        "product_ids" => [],
-        "categories"  => ['watches'],
-        "tags"        => ['CoupleWatches'],
-        "brands"      => ['casio'],
-    ],
-    "add_tag"         => "valentines-day"
-];
+```json
+{
+    "dry_run": false,
+    "discount_type": "percentage",
+    "discount_value": 10,
+    "apply_to_all": true,
+    "exclude_on_sale": false,
+    "exclude": {
+        "product_ids": [],
+        "categories": [],
+        "tags": [],
+        "brands": []
+    },
+    "include": {
+        "product_ids": [],
+        "categories": ["watches"],
+        "tags": ["CoupleWatches"],
+        "brands": ["casio"]
+    },
+    "add_tag": "valentines-day"
+}
 ```
 
 ---
 
 ### Configuration Reference (Detailed)
+
+#### `dry_run`
+- Type: `bool`
+- Default: `false`
+
+If `true`, the script will simulate the discount application/removal without making actual changes to products. Useful for testing configurations.
 
 #### `discount_type`
 - Type: `string`
@@ -243,13 +298,13 @@ This defines what should be excluded.
 
 Example:
 
-```php
-"exclude" => [
-  "product_ids" => [12, 55],
-  "categories"  => ["sale"],
-  "tags"        => ["black-friday"],
-  "brands"      => ["casio"],
-]
+```json
+"exclude": {
+  "product_ids": [12, 55],
+  "categories": ["sale"],
+  "tags": ["black-friday"],
+  "brands": ["casio"]
+}
 ```
 
 ---
@@ -266,13 +321,13 @@ This defines what should be included when `apply_to_all = false`.
 
 Example:
 
-```php
-"include" => [
-  "product_ids" => [99, 100],
-  "categories"  => ["watches"],
-  "tags"        => ["couplewatches"],
-  "brands"      => ["casio"],
-]
+```json
+"include": {
+  "product_ids": [99, 100],
+  "categories": ["watches"],
+  "tags": ["couplewatches"],
+  "brands": ["casio"]
+}
 ```
 
 ---
@@ -290,14 +345,28 @@ If set, the script will add this product tag to discounted products.
 
 ### Example: Apply 15% to Everything Except Some Categories
 
-```php
-$discount_rules = [
-  "discount_type"   => "percentage",
-  "discount_value"  => 15,
-  "apply_to_all"    => true,
-  "exclude_on_sale" => true,
-  "exclude"         => [
-    "product_ids" => [],
+```json
+{
+  "dry_run": false,
+  "discount_type": "percentage",
+  "discount_value": 15,
+  "apply_to_all": true,
+  "exclude_on_sale": true,
+  "exclude": {
+    "product_ids": [],
+    "categories": ["clearance"],
+    "tags": [],
+    "brands": []
+  },
+  "include": {
+    "product_ids": [],
+    "categories": [],
+    "tags": [],
+    "brands": []
+  },
+  "add_tag": "discounted"
+}
+```
     "categories"  => ["clearance"],
     "tags"        => [],
     "brands"      => [],
@@ -325,24 +394,25 @@ This script removes the discount by:
 
 ---
 
-### Rules (`$rules`)
+### Rules (remove-discount.json)
 
-```php
-$rules = [
-    "apply_to_all"    => true,
-    "exclude"         => [
-        "product_ids" => [],
-        "categories"  => [],
-        "tags"        => [],
-        "brands"      => [],
-    ],
-    "include"        => [
-        "product_ids" => [],
-        "categories"  => [],
-        "tags"        => [],
-        "brands"      => [],
-    ],
-];
+```json
+{
+    "dry_run": false,
+    "apply_to_all": true,
+    "exclude": {
+        "product_ids": [],
+        "categories": [],
+        "tags": [],
+        "brands": []
+    },
+    "include": {
+        "product_ids": [],
+        "categories": [],
+        "tags": [],
+        "brands": []
+    }
+}
 ```
 
 ---
@@ -490,13 +560,29 @@ wordpress/
 
 ## 11) Output Example
 
-The script prints progress for each batch and product:
+The script prints a CSV header and processes each product, outputting details:
 
+For add-discount.php:
 ```
-📦 Batch page 1 - loaded 200 product IDs
-✔ Discount applied to 123   100   90   Product Name
-✔ Discount applied to 124   200   180  Another Product
+ID,RegularPrice,SalePrice,Name,Brand
+123,100.00,90.00,Product Name,Casio
+124,200.00,180.00,Another Product,
 ...
+```
+
+For remove-discount.php:
+```
+ID,RegularPrice,Name,Brand
+123,100.00,Product Name,Casio
+124,200.00,Another Product,
+...
+```
+
+At the end, it shows summary:
+```
+Discount process completed.
+   - Processed products: 150
+   - Processed variations: 50
 ```
 
 ---
