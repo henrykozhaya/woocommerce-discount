@@ -2,7 +2,7 @@
 
 ## Add Discount
 
-This script applies discounts to WooCommerce products based on configurable rules. It supports percentage or fixed amount discounts, with options to include/exclude products by ID, category, tag, or brand. The script processes products in memory-safe batches and can optionally add a tag to discounted products.
+This script applies discounts to WooCommerce products based on configurable rules. It supports percentage or fixed amount discounts, with options to include/exclude products by ID, category, tag, brand, or WooCommerce attribute. The script processes products in memory-safe batches and can optionally add a tag to discounted products.
 
 ## Remove Discount
 
@@ -29,12 +29,28 @@ It is designed for stores with **thousands of products**, and avoids memory exha
 woocommerce-discount/
 ├─ add-discount.json
 ├─ add-discount.php
+├─ assets/
 ├─ functions.php
 ├─ index.php
 ├─ README.md
 ├─ remove-discount.json
-└─ remove-discount.php
+├─ remove-discount.php
+└─ woocommerce-discount.php
 ```
+
+`woocommerce-discount.php` turns the project into a WordPress plugin with an admin UI under:
+
+```
+WooCommerce > Discount Rules
+```
+
+To activate it as a plugin, place the whole `woocommerce-discount` folder in:
+
+```
+wp-content/plugins/woocommerce-discount/
+```
+
+The SSH scripts still work and continue to use the same JSON files.
 
 ---
 
@@ -224,13 +240,17 @@ And optionally adds a tag to the product.
         "product_ids": [],
         "categories": [],
         "tags": [],
-        "brands": []
+        "brands": [],
+        "attributes": {}
     },
     "include": {
         "product_ids": [],
         "categories": ["watches"],
         "tags": ["CoupleWatches"],
-        "brands": ["casio"]
+        "brands": ["casio"],
+        "attributes": {
+            "pa_gender": ["women"]
+        }
     },
     "add_tag": "valentines-day"
 }
@@ -274,6 +294,14 @@ If `true`:
 If `false`:
 
 - The script targets only products defined in `include`
+- Then applies the `exclude` rules to remove products from that included set
+
+This lets you build rules such as:
+
+- Include category `watches`
+- Include attribute `pa_gender = men`
+- Exclude brands `casio` and `g-shock`
+- Add tag `fathers-day`
 
 ---
 
@@ -295,6 +323,7 @@ This defines what should be excluded.
 - `categories`: array of category slugs
 - `tags`: array of tag slugs
 - `brands`: array of brand slugs (**taxonomy: `product_brand`**)
+- `attributes`: object where each key is a WooCommerce attribute taxonomy and each value is an array of term slugs
 
 Example:
 
@@ -303,9 +332,19 @@ Example:
   "product_ids": [12, 55],
   "categories": ["sale"],
   "tags": ["black-friday"],
-  "brands": ["casio"]
+  "brands": ["casio"],
+  "attributes": {
+    "pa_gender": ["men"]
+  }
 }
 ```
+
+Attribute keys may be written as either `gender` or `pa_gender`; the script normalizes `gender` to `pa_gender`.
+
+The `exclude` rules are applied in both modes:
+
+- `apply_to_all = true`: start from all products, then subtract exclusions
+- `apply_to_all = false`: start from included products, then subtract exclusions
 
 ---
 
@@ -318,6 +357,7 @@ This defines what should be included when `apply_to_all = false`.
 - `categories`: array of category slugs
 - `tags`: array of tag slugs
 - `brands`: array of brand slugs
+- `attributes`: object where each key is a WooCommerce attribute taxonomy and each value is an array of term slugs
 
 Example:
 
@@ -326,7 +366,39 @@ Example:
   "product_ids": [99, 100],
   "categories": ["watches"],
   "tags": ["couplewatches"],
-  "brands": ["casio"]
+  "brands": ["casio"],
+  "attributes": {
+    "pa_gender": ["women"]
+  }
+}
+```
+
+### Example: Father's Day Watches for Men, Excluding Brands
+
+```json
+{
+  "dry_run": false,
+  "discount_type": "percentage",
+  "discount_value": 20,
+  "apply_to_all": false,
+  "exclude_on_sale": true,
+  "exclude": {
+    "product_ids": [],
+    "categories": [],
+    "tags": [],
+    "brands": ["casio", "g-shock"],
+    "attributes": {}
+  },
+  "include": {
+    "product_ids": [],
+    "categories": ["watches"],
+    "tags": [],
+    "brands": [],
+    "attributes": {
+      "pa_gender": ["men"]
+    }
+  },
+  "add_tag": "fathers-day"
 }
 ```
 
@@ -404,13 +476,15 @@ This script removes the discount by:
         "product_ids": [],
         "categories": [],
         "tags": [],
-        "brands": []
+        "brands": [],
+        "attributes": {}
     },
     "include": {
         "product_ids": [],
         "categories": [],
         "tags": [],
-        "brands": []
+        "brands": [],
+        "attributes": {}
     }
 }
 ```
@@ -439,12 +513,13 @@ You can still exclude some products using:
 - `exclude.categories`
 - `exclude.tags`
 - `exclude.brands`
+- `exclude.attributes`
 
 ---
 
 #### Mode B: `apply_to_all = false`
 
-The script will remove discounts only from products matched by the `include` rules.
+The script will remove discounts only from products matched by the `include` rules, after subtracting any matching `exclude` rules.
 
 ---
 

@@ -1,24 +1,43 @@
 {
     "dry_run": true,
-    "discount_type": "percentage",
-    "discount_value": 10,
     "apply_to_all": false,
-    "exclude_on_sale": false,
     "exclude": {
         "product_ids": [],
         "categories": [],
         "tags": [],
-        "brands": []
+        "brands": [
+            "casio",
+            "g-shock",
+            "baby-g",
+            "edifice",
+            "protrek",
+            "raymond-weil-geneve",
+            "lotus-style"
+        ],
+        "attributes": []
     },
     "include": {
         "product_ids": [],
-        "categories": [],
+        "categories": [
+            "watches",
+            "classic-watches",
+            "fashion-watches",
+            "smartwatches",
+            "special-edition-watches",
+            "sport-watches",
+            "swiss-watches",
+            "vintage-watches"
+        ],
         "tags": [],
-        "brands": []
+        "brands": [],
+        "attributes": {
+            "pa_gender": [
+                "men"
+            ]
+        }
     },
-    "add_tag": "",
-    "documentation": {
-        "product_ids_comment": "IDs should be Integers",
-        "include_exclude": "They can't be used with product_ids at the same time"
-    }
+    "discount_type": "percentage",
+    "discount_value": 20,
+    "exclude_on_sale": true,
+    "add_tag": "fathersday"
 }

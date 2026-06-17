@@ -14,7 +14,6 @@ function build_wc_product_query_args(array $rules, int $limit = 200, int $page =
     if ($rules["apply_to_all"]) {
 
         if ($action == "add") {
-            $excluded_custom_products_ids = [];
             $excluded_onsale_ids = [];
 
             if (isset($rules["exclude_on_sale"]) && $rules["exclude_on_sale"]) {
@@ -32,62 +31,29 @@ function build_wc_product_query_args(array $rules, int $limit = 200, int $page =
                 );
             }
 
-            $excluded_custom_products_ids = !empty($rules["exclude"]["product_ids"]) ? $rules["exclude"]["product_ids"] : [];
-
-            if (!empty($excluded_custom_products_ids)) {
-                $args['exclude'] = $excluded_custom_products_ids;
-            }
-
             if (!empty($excluded_onsale_ids)) {
                 $args['exclude'] = isset($args['exclude'])
                     ? array_merge($args['exclude'], $excluded_onsale_ids)
                     : $excluded_onsale_ids;
             }
         } else if ($action == "remove") {
-            $excluded_custom_products_ids = [];
-
             // 1. Get all sale IDs
             $all_sale_ids = wc_get_product_ids_on_sale();
 
-            // 2. Custom IDs to exclude
-            if (!empty($rules["exclude"]["product_ids"])) {
-                $excluded_custom_products_ids = $rules["exclude"]["product_ids"];
+            // 2. The shared exclusions below will remove custom excluded IDs and taxonomies.
+            $args['include'] = $all_sale_ids;
+
+            if (count($args["include"]) <= 0) {
+                echo "No products on sale to process\n";
+                $args['include'] = [0];
             }
-
-            // 3. Filter the array: returns everything in $all_sale_ids NOT in $excluded_custom_products_ids
-            $args['include'] = array_diff($all_sale_ids, $excluded_custom_products_ids);
-
-            if (count($args["include"]) <= 0) die("No products on sale to process");
-        }
-
-        if (!empty($rules["exclude"]["categories"])) {
-            $args['tax_query'][] = [
-                'taxonomy' => 'product_cat',
-                'field'    => 'slug',
-                'terms'    => $rules["exclude"]["categories"],
-                'operator' => 'NOT IN',
-            ];
-        }
-
-        if (!empty($rules["exclude"]["tags"])) {
-            $args['tax_query'][] = [
-                'taxonomy' => 'product_tag',
-                'field'    => 'slug',
-                'terms'    => $rules["exclude"]["tags"],
-                'operator' => 'NOT IN',
-            ];
-        }
-
-        if (!empty($rules["exclude"]["brands"])) {
-            $args['tax_query'][] = [
-                'taxonomy' => 'product_brand',
-                'field'    => 'slug',
-                'terms'    => $rules["exclude"]["brands"],
-                'operator' => 'NOT IN',
-            ];
         }
     } 
     else {
+        if (!discount_rule_group_has_selectors($rules["include"])) {
+            $args['include'] = [0];
+        }
+
         if (isset($rules["exclude_on_sale"]) && $rules["exclude_on_sale"]) {
             $args['meta_query'][] = array(
                 'relation' => 'OR',
@@ -107,34 +73,107 @@ function build_wc_product_query_args(array $rules, int $limit = 200, int $page =
             $args['include'] = $rules["include"]["product_ids"];
         }
 
-        if (!empty($rules["include"]["categories"])) {
-            $args['tax_query'][] = [
-                'taxonomy' => 'product_cat',
-                'field'    => 'slug',
-                'terms'    => $rules["include"]["categories"],
-                'operator' => 'IN',
-            ];
+        add_discount_tax_query($args, 'product_cat', $rules["include"]["categories"], 'IN');
+        add_discount_tax_query($args, 'product_tag', $rules["include"]["tags"], 'IN');
+        add_discount_tax_query($args, 'product_brand', $rules["include"]["brands"], 'IN');
+        add_discount_attribute_tax_queries($args, $rules["include"], 'IN');
+    }
+
+    add_discount_product_id_exclusions($args, $rules["exclude"]["product_ids"]);
+    add_discount_tax_query($args, 'product_cat', $rules["exclude"]["categories"], 'NOT IN');
+    add_discount_tax_query($args, 'product_tag', $rules["exclude"]["tags"], 'NOT IN');
+    add_discount_tax_query($args, 'product_brand', $rules["exclude"]["brands"], 'NOT IN');
+    add_discount_attribute_tax_queries($args, $rules["exclude"], 'NOT IN');
+
+    return $args;
+}
+
+function add_discount_product_id_exclusions(array &$args, array $product_ids): void
+{
+    if (empty($product_ids)) {
+        return;
+    }
+
+    if (!empty($args['include'])) {
+        $args['include'] = array_values(array_diff($args['include'], $product_ids));
+
+        if (empty($args['include'])) {
+            $args['include'] = [0];
         }
 
-        if (!empty($rules["include"]["tags"])) {
-            $args['tax_query'][] = [
-                'taxonomy' => 'product_tag',
-                'field'    => 'slug',
-                'terms'    => $rules["include"]["tags"],
-                'operator' => 'IN',
-            ];
-        }
+        return;
+    }
 
-        if (!empty($rules["include"]["brands"])) {
-            $args['tax_query'][] = [
-                'taxonomy' => 'product_brand',
-                'field'    => 'slug',
-                'terms'    => $rules["include"]["brands"],
-                'operator' => 'IN',
-            ];
+    $args['exclude'] = isset($args['exclude'])
+        ? array_values(array_unique(array_merge($args['exclude'], $product_ids)))
+        : $product_ids;
+}
+
+function discount_rule_group_has_selectors(array $rule_group): bool
+{
+    foreach (['product_ids', 'categories', 'tags', 'brands'] as $key) {
+        if (!empty($rule_group[$key])) {
+            return true;
         }
     }
-    return $args;
+
+    if (empty($rule_group['attributes']) || !is_array($rule_group['attributes'])) {
+        return false;
+    }
+
+    foreach ($rule_group['attributes'] as $terms) {
+        if (!empty($terms)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+function add_discount_tax_query(array &$args, string $taxonomy, array $terms, string $operator): void
+{
+    if (empty($terms)) {
+        return;
+    }
+
+    $args['tax_query'][] = [
+        'taxonomy' => $taxonomy,
+        'field'    => 'slug',
+        'terms'    => $terms,
+        'operator' => $operator,
+    ];
+}
+
+function add_discount_attribute_tax_queries(array &$args, array $rule_group, string $operator): void
+{
+    if (empty($rule_group['attributes']) || !is_array($rule_group['attributes'])) {
+        return;
+    }
+
+    foreach ($rule_group['attributes'] as $attribute => $terms) {
+        if (empty($terms) || !is_array($terms)) {
+            continue;
+        }
+
+        $taxonomy = normalize_discount_attribute_taxonomy((string) $attribute);
+
+        if (!$taxonomy || !taxonomy_exists($taxonomy)) {
+            continue;
+        }
+
+        add_discount_tax_query($args, $taxonomy, $terms, $operator);
+    }
+}
+
+function normalize_discount_attribute_taxonomy(string $attribute): string
+{
+    $attribute = sanitize_title($attribute);
+
+    if ($attribute === '') {
+        return '';
+    }
+
+    return strpos($attribute, 'pa_') === 0 ? $attribute : 'pa_' . $attribute;
 }
 
 function apply_sale_price_discount(array $rules)
@@ -144,7 +183,7 @@ function apply_sale_price_discount(array $rules)
     }
 
     if (!validate_add_discount_rules($rules, "add")) {
-        die("❌ Error with discount rules");
+        echo "Error with discount rules\n";
         return;
     }
 
@@ -176,8 +215,9 @@ function apply_sale_price_discount(array $rules)
 
             if ($product->is_type('simple')) {
 
-                apply_discount_to_product($product, $rules);
-                $processed_products++;
+                if (apply_discount_to_product($product, $rules)) {
+                    $processed_products++;
+                }
             } elseif ($product->is_type('variable')) {
 
                 // Apply discount to variations only
@@ -186,8 +226,9 @@ function apply_sale_price_discount(array $rules)
                     $variation = wc_get_product($variation_id);
 
                     if ($variation) {
-                        apply_discount_to_product($variation, $rules);
-                        $processed_variations++;
+                        if (apply_discount_to_product($variation, $rules)) {
+                            $processed_variations++;
+                        }
 
                         // Free memory aggressively
                         unset($variation);
@@ -215,14 +256,18 @@ function apply_sale_price_discount(array $rules)
     echo "   - Processed variations: {$processed_variations}\n";
 }
 
-function apply_discount_to_product(WC_Product $product, array $rules)
+function apply_discount_to_product(WC_Product $product, array $rules): bool
 {
     $dryRun = isset($rules["dry_run"]) && $rules["dry_run"] === true;
+
+    if (!empty($rules["exclude_on_sale"]) && discount_product_has_sale_price($product)) {
+        return false;
+    }
 
     $regular_price = (float) $product->get_regular_price();
 
     if ($regular_price <= 0) {
-        return;
+        return false;
     }
 
     if ($rules['discount_type'] === 'percentage') {
@@ -255,7 +300,14 @@ function apply_discount_to_product(WC_Product $product, array $rules)
     if (!empty($terms) && !is_wp_error($terms)) {
 	    $brand = implode(', ', wp_list_pluck($terms, 'name'));
 	}     
-	echo "{$product->get_id()},{$regular_price},{$sale_price},{$product->get_name()},{$brand}\n";    
+	echo "{$product->get_id()},{$regular_price},{$sale_price},{$product->get_name()},{$brand}\n";
+
+    return true;
+}
+
+function discount_product_has_sale_price(WC_Product $product): bool
+{
+    return (string) $product->get_sale_price() !== '' || $product->is_on_sale();
 }
 
 function apply_tag_to_discounted_product(WC_Product $product, string $tag_slug)
@@ -283,7 +335,7 @@ function remove_product_discount(array $rules)
     }
 
     if (!validate_add_discount_rules($rules, "remove")) {
-        die("❌ Error with discount rules");
+        echo "Error with discount rules\n";
         return;
     }
 
@@ -401,6 +453,8 @@ function validate_add_discount_rules($rules, $action = "add")
         ||
         !isset($rules["exclude"]["brands"])
         ||
+        !isset($rules["exclude"]["attributes"])
+        ||
         !isset($rules["include"])
         ||
         !isset($rules["include"]["product_ids"])
@@ -410,6 +464,8 @@ function validate_add_discount_rules($rules, $action = "add")
         !isset($rules["include"]["tags"])
         ||
         !isset($rules["include"]["brands"])
+        ||
+        !isset($rules["include"]["attributes"])
     ) return false;
     foreach ($rules["exclude"] as $exclude) {
         if (!is_array($exclude)) return false;
@@ -432,7 +488,7 @@ function validate_add_discount_rules($rules, $action = "add")
 
 function readSettings($action = "add"){
     $settings = [];
-    $filePath = $action . "-discount.json";
+    $filePath = __DIR__ . "/" . $action . "-discount.json";
     $file = fopen($filePath, "r");
     $fileJSON = fread($file, filesize($filePath));
     $settings = json_decode($fileJSON, true);

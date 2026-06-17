@@ -1,0 +1,79 @@
+.wcdp-wrap {
+    max-width: 1180px;
+}
+
+.wcdp-form {
+    margin-top: 16px;
+}
+
+.wcdp-panel {
+    background: #fff;
+    border: 1px solid #c3c4c7;
+    border-radius: 4px;
+    margin: 16px 0;
+    padding: 18px;
+}
+
+.wcdp-panel h2,
+.wcdp-panel h3 {
+    margin-top: 0;
+}
+
+.wcdp-output-header {
+    align-items: center;
+    display: flex;
+    gap: 12px;
+    justify-content: space-between;
+    margin-bottom: 12px;
+}
+
+.wcdp-output-header h2 {
+    margin: 0;
+}
+
+.wcdp-grid {
+    display: grid;
+    gap: 16px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.wcdp-attributes {
+    display: grid;
+    gap: 14px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.wcdp-field,
+.wcdp-check {
+    display: block;
+    margin: 0 0 14px;
+}
+
+.wcdp-field span {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 6px;
+}
+
+.wcdp-field input,
+.wcdp-field select,
+.wcdp-field textarea {
+    max-width: 100%;
+    width: 100%;
+}
+
+.wcdp-output {
+    background: #101517;
+    color: #f2f7f8;
+    max-height: 520px;
+    overflow: auto;
+    padding: 14px;
+    white-space: pre-wrap;
+}
+
+@media (max-width: 782px) {
+    .wcdp-grid,
+    .wcdp-attributes {
+        grid-template-columns: 1fr;
+    }
+}

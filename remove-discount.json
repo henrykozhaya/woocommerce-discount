@@ -1,16 +1,20 @@
 {
-    "dry_run": true,
+    "dry_run": false,
     "apply_to_all": false,
     "exclude": {
         "product_ids": [],
         "categories": [],
         "tags": [],
-        "brands": []
+        "brands": [],
+        "attributes": []
     },
     "include": {
         "product_ids": [],
         "categories": [],
-        "tags": [],
-        "brands": []
+        "tags": [
+            "fathersday"
+        ],
+        "brands": [],
+        "attributes": []
     }
 }
